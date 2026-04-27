@@ -1,33 +1,64 @@
 import os
-import requests
 import time
+import requests
+import json
+
 from db import add_user, get_users
 from signals import get_signal
 from time_engine import execution_time, countdown
+from model import ai_filter
+from features import handle_menu
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
 
-def send(text):
-    users = get_users()
-    msg_ids = []
 
-    for u in users:
-        res = requests.post(URL+"/sendMessage", data={
-            "chat_id": u,
-            "text": text
-        }).json()
+def send(chat_id, text, keyboard=None):
 
-        msg_ids.append((u, res["result"]["message_id"]))
+    data = {
+        "chat_id": chat_id,
+        "text": text,
+        "parse_mode": "Markdown"
+    }
 
-    return msg_ids
+    if keyboard:
+        data["reply_markup"] = json.dumps(keyboard)
+
+    return requests.post(URL+"/sendMessage", data=data).json()
+
 
 def edit(chat_id, msg_id, text):
+
     requests.post(URL+"/editMessageText", data={
         "chat_id": chat_id,
         "message_id": msg_id,
         "text": text
     })
+
+
+def start(chat_id):
+
+    add_user(chat_id)
+
+    keyboard = {
+        "keyboard": [
+            ["📊 Auto Signal", "📈 Live Result"],
+            ["💰 Money Management"],
+            ["👨‍💻 Admin Contact"]
+        ],
+        "resize_keyboard": True
+    }
+
+    send(chat_id, "🤖 AI SIGNAL BOT STARTED", keyboard)
+
+
+def get_updates(offset=None):
+
+    return requests.get(URL+"/getUpdates", params={
+        "timeout": 100,
+        "offset": offset
+    }).json()
+
 
 def run():
 
@@ -35,10 +66,7 @@ def run():
 
     while True:
 
-        updates = requests.get(URL+"/getUpdates", params={
-            "timeout": 100,
-            "offset": offset
-        }).json()
+        updates = get_updates(offset)
 
         for u in updates.get("result", []):
 
@@ -52,45 +80,48 @@ def run():
             text = msg.get("text","")
 
             if text == "/start":
-                add_user(chat_id)
-                requests.post(URL+"/sendMessage", data={
-                    "chat_id": chat_id,
-                    "text": "🤖 Bot Activated! You will receive live signals."
-                })
+                start(chat_id)
+                continue
 
-        # SIGNAL GENERATE
+            reply = handle_menu(chat_id, text)
+
+            if reply:
+                send(chat_id, reply)
+
+        # ---------------- SIGNAL SYSTEM ----------------
+
         sig = get_signal()
+
+        if not ai_filter(sig):
+            continue
+
         exec_time = execution_time()
 
         users = get_users()
         msg_map = {}
 
         for u in users:
-            res = requests.post(URL+"/sendMessage", data={
-                "chat_id": u,
-                "text": f"""
-🤖 LIVE SIGNAL
+
+            res = send(u, f"""
+🤖 AI SIGNAL
 
 💰 {sig['pair']}
 📈 {sig['direction']}
 
 ⏱ Execution: {exec_time.strftime('%H:%M UTC')}
 🛡 Risk: {sig['risk']}/100
-
-⏳ Starting countdown...
-"""
-            }).json()
+""")
 
             msg_map[u] = res["result"]["message_id"]
 
-        # LIVE COUNTDOWN UPDATE
+        # countdown loop
         for _ in range(10):
 
             cd = countdown(exec_time)
 
             for u in users:
                 edit(u, msg_map[u], f"""
-🤖 LIVE SIGNAL
+🤖 AI SIGNAL
 
 💰 {sig['pair']}
 📈 {sig['direction']}
@@ -104,3 +135,6 @@ def run():
             time.sleep(10)
 
         time.sleep(5)
+
+
+run()
