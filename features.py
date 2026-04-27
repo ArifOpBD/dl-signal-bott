@@ -1,5 +1,22 @@
-import random
+def handle_menu(chat_id, text):
 
-def get_sequence():
-    # simulate last 10 candles movement
-    return [random.uniform(-1, 1) for _ in range(10)]
+    if text == "📊 Auto Signal":
+        return "📊 Auto Signal Active..."
+
+    elif text == "💰 Money Management":
+        return """
+💰 MONEY MANAGEMENT
+
+Risk:
+• Low = 1%
+• Medium = 2%
+• High = 3%
+"""
+
+    elif text == "👨‍💻 Admin Contact":
+        return "👨‍💻 Admin: @qxabir"
+
+    elif text == "📈 Live Result":
+        return "📈 Live system running..."
+
+    return None
