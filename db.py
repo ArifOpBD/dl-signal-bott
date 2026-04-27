@@ -12,9 +12,9 @@ CREATE TABLE IF NOT EXISTS users (
 conn.commit()
 
 def add_user(chat_id):
-    cur.execute("INSERT OR IGNORE INTO users (chat_id) VALUES (?)", (chat_id,))
+    cur.execute("INSERT OR IGNORE INTO users VALUES (?)", (chat_id,))
     conn.commit()
 
 def get_users():
     cur.execute("SELECT chat_id FROM users")
-    return [row[0] for row in cur.fetchall()]
+    return [i[0] for i in cur.fetchall()]
