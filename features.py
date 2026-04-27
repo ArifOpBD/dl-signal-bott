@@ -3,20 +3,13 @@ def handle_menu(chat_id, text):
     if text == "📊 Auto Signal":
         return "📊 Auto Signal Active..."
 
-    elif text == "💰 Money Management":
-        return """
-💰 MONEY MANAGEMENT
+    if text == "💰 Money Management":
+        return "💰 Use 1% - 3% per trade"
 
-Risk:
-• Low = 1%
-• Medium = 2%
-• High = 3%
-"""
+    if text == "👨‍💻 Admin Contact":
+        return "👨‍💻 @qxabir"
 
-    elif text == "👨‍💻 Admin Contact":
-        return "👨‍💻 Admin: @qxabir"
-
-    elif text == "📈 Live Result":
-        return "📈 Live system running..."
+    if text == "📈 Live Result":
+        return "📈 Tracking signals..."
 
     return None
