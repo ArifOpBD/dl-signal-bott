@@ -1,15 +1,9 @@
-import numpy as np
+def ai_filter(signal):
 
-class DLModel:
-    def predict(self, sequence):
-        # pattern strength detection
-        arr = np.array(sequence)
+    risk = signal["risk"]
 
-        momentum = np.mean(arr)
-        volatility = np.std(arr)
+    # filter bad signals
+    if risk > 75:
+        return False
 
-        score = (momentum * 50) + (1 / (volatility + 0.1)) * 10
-
-        # normalize
-        prob = 1 / (1 + np.exp(-score / 10))
-        return prob
+    return True
