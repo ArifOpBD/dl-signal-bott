@@ -1,9 +1,6 @@
 def ai_filter(signal):
 
-    risk = signal["risk"]
-
-    # filter bad signals
-    if risk > 75:
+    if signal["risk"] > 80:
         return False
 
     return True
