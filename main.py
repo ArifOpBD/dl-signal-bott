@@ -1,46 +1,78 @@
 import os
 import time
 import requests
-from model import DLModel
-from features import get_sequence
+import json
+from db import add_user, get_users
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-CHAT_ID = os.getenv("CHAT_ID")
+URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
 
-def send(msg):
-    requests.post(
-        f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-        data={"chat_id": CHAT_ID, "text": msg}
+def send(chat_id, text, keyboard=None):
+    data = {
+        "chat_id": chat_id,
+        "text": text,
+        "parse_mode": "Markdown"
+    }
+
+    if keyboard:
+        data["reply_markup"] = json.dumps(keyboard)
+
+    requests.post(URL + "/sendMessage", data=data)
+
+# /start system
+def start(chat_id):
+    add_user(chat_id)
+
+    keyboard = {
+        "keyboard": [
+            ["📊 Auto Signal", "📈 Live Result"],
+            ["💰 Money Management"],
+            ["👥 VIP Group"]
+        ],
+        "resize_keyboard": True
+    }
+
+    send(chat_id,
+        "🔥 *AUTO SIGNAL BOT*\n\n⚡ Fast | 🎯 Accurate | 💰 Smart Trading\n\nSelect an option below:",
+        keyboard
     )
 
-model = DLModel()
+# broadcast signals
+def broadcast(message):
+    users = get_users()
+    for u in users:
+        send(u, message)
 
-def analyze():
-    seq = get_sequence()
-    prob = model.predict(seq)
+# Telegram updates
+def get_updates(offset=None):
+    return requests.get(URL + "/getUpdates", params={
+        "timeout": 100,
+        "offset": offset
+    }).json()
 
-    if prob > 0.75:
-        signal = "UP 📈" if sum(seq) > 0 else "DOWN 📉"
+# main loop
+def run():
+    offset = None
 
-        return signal, prob
+    while True:
+        updates = get_updates(offset)
 
-    return None, prob
+        for u in updates.get("result", []):
+            offset = u["update_id"] + 1
 
-while True:
-    result = analyze()
+            msg = u.get("message")
+            if not msg:
+                continue
 
-    if result:
-        signal, prob = result
+            chat_id = msg["chat"]["id"]
+            text = msg.get("text", "")
 
-        send(f"""
-🤖 DEEP LEARNING SIGNAL
+            if text == "/start":
+                start(chat_id)
 
-Signal: {signal}
-Confidence: {round(prob*100,2)}%
+        time.sleep(60)
 
-🧠 Pattern detected from last 10 candles
+        # demo signal
+        broadcast("📊 SIGNAL: EUR/USD → UP 📈")
 
-⚠️ High-quality setup only
-""")
-
-    time.sleep(60)
+run()
